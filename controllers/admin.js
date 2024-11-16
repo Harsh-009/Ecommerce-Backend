@@ -20,6 +20,7 @@ const postAddProduct = async (req, res, next) => {
     price: price,
     description: description,
     imageUrl: imageUrl,
+    userId: req.user._id,
   });
   try {
     const result = await product.save();
@@ -78,8 +79,9 @@ const postEditProduct = async (req, res, next) => {
 
 const getProducts = async (req, res, next) => {
   try {
-    const products = await Product.find();
-
+    const products = await Product.find()
+      // .select("title price -_id")
+      // .populate("userId", "name");
     return res.render("admin/products", {
       prods: products,
       pageTitle: "Admin Products",
@@ -94,12 +96,10 @@ const postDeleteProduct = async (req, res, next) => {
   const { productId } = req.body;
 
   try {
-    await Product.deleteById(productId); // Await the deleteById function
-    console.log("Product deleted");
+    await Product.findByIdAndDelete(productId); // Await the deleteById function
     res.redirect("/admin/products");
   } catch (err) {
     console.log(err);
-    next(err); // Pass the error to the next middleware if any
   }
 };
 

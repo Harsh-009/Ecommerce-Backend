@@ -1,4 +1,6 @@
 const Product = require("../models/product");
+const Order = require("../models/order");
+const product = require("../models/product");
 
 const getProducts = async (req, res, next) => {
   try {
@@ -24,7 +26,7 @@ const getProduct = async (req, res, next) => {
       path: "/products",
     });
   } catch (err) {
-    console.log('Error finding product detail', err)
+    console.log("Error finding product detail", err);
   }
 };
 
@@ -43,12 +45,12 @@ const getIndex = async (req, res, next) => {
 
 const getCart = async (req, res, next) => {
   try {
-    const cartProducts = await req.user.getCart();
-
+    const populate = await req.user.populate("cart.items.productId");
+    const cartItems = req.user.cart.items;
     res.render("shop/cart", {
       path: "/cart",
       pageTitle: "Your Cart",
-      products: cartProducts,
+      products: cartItems,
     });
   } catch (err) {
     console.log("Error fetching cart :", err);
@@ -83,8 +85,23 @@ const postCartDeleteProduct = async (req, res, next) => {
 
 const postOrder = async (req, res, next) => {
   try {
-    // add an order for the user
-    await req.user.addOrder();
+    const populatedUser = await req.user.populate("cart.items.productId"); //populate the cart.items with the order details
+    const products = populatedUser.cart.items.map((i) => {
+      return {
+        quantity: i.quantity,
+        product: {...i.productId._doc}, // spread the product document into the order
+      };
+    });
+    console.log(products);
+    const order = new Order({
+      user: {
+        name: req.user.name,
+        userId: req.user,
+      },
+      products: products,
+    });
+    await order.save()
+    await req.user.clearCart()
     // then redirect to orders after placing an order
     res.redirect("/orders");
   } catch (err) {
@@ -95,7 +112,8 @@ const postOrder = async (req, res, next) => {
 
 const getOrders = async (req, res, next) => {
   try {
-    const orders = await req.user.getOrders();
+    const orders = await Order.find({"user.userId": req.user._id})
+    console.log(orders)
 
     res.render("shop/orders", {
       path: "/orders",
