@@ -2,18 +2,30 @@ const User = require("../models/user");
 const bcrypt = require("bcryptjs");
 
 const getLogin = (req, res, next) => {
+  let message = req.flash('error')
+  if(message.length > 0) {
+    message = message[0]
+  } else {
+    message = null
+  }
   res.render("auth/login", {
     path: "/login",
     pageTitle: "Login",
-    isAuthenticated: false,
+    errorMessage: message || null
   });
 };
 
 const getSignUp = (req, res, next) => {
+  let message = req.flash('error')
+  if(message.length > 0) {
+    message = message[0]
+  } else {
+    message = null
+  }
   res.render("auth/signup", {
     path: "/signup",
     pageTitle: "Signup",
-    isAuthenticated: false,
+    errorMessage: message || null
   });
 };
 
@@ -23,12 +35,14 @@ const postLogin = async (req, res, next) => {
   try {
     const validUser = await User.findOne({ email: email });
     if (!validUser) {
+      req.flash('error', 'Invalid credentials')
       return res.status(404).redirect("/login");
     }
     const isMatch = await bcrypt.compare(password, validUser.password);
 
     if (!isMatch) {
       console.log("password does not match");
+      req.flash('error', 'Invalid password')
       return res.status(401).redirect("/login");
     }
     // attach the user obj to the req with the user constructor
@@ -49,7 +63,7 @@ const postSignUp = async (req, res, next) => {
   try {
     const userDoc = await User.findOne({ email: email });
     if (userDoc) {
-      console.log("user already exists");
+      req.flash('error', "E-mail exists already, please use another email")
       return res.redirect("/signup");
     }
     // if(password !== confirmPassword) {

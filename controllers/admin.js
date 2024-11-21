@@ -1,12 +1,14 @@
 const Product = require("../models/product");
 
 const getAddProduct = async (req, res, next) => {
+  if(!req.session.isLoggedIn) {
+    return res.redirect('/login')
+  }
   try {
     return res.render("admin/edit-product", {
       pageTitle: "Add Product",
       path: "/admin/add-product",
       editing: false,
-      isAuthenticated: req.session.isLoggedIn
     });
   } catch (err) {
     console.log(err);
@@ -49,7 +51,6 @@ const getEditProduct = async (req, res, next) => {
       path: "/admin/edit-product",
       editing: editMode,
       product: editDetails,
-      isAuthenticated: req.session.isLoggedIn
     });
   } catch (err) {
     console.log("Error finding Edit Details", err);
@@ -87,7 +88,6 @@ const getProducts = async (req, res, next) => {
       prods: products,
       pageTitle: "Admin Products",
       path: "/admin/products",
-      isAuthenticated: req.session.isLoggedIn
     });
   } catch (err) {
     console.log("Error Finding products ", err);
