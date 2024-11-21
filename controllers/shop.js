@@ -9,6 +9,7 @@ const getProducts = async (req, res, next) => {
       prods: products,
       pageTitle: "All products",
       path: "/products",
+      isAuthenticated: req.session.isLoggedIn
     });
   } catch (err) {
     console.log("Error fetching all products", err);
@@ -24,6 +25,7 @@ const getProduct = async (req, res, next) => {
       product: product,
       pageTitle: product.title,
       path: "/products",
+      isAuthenticated: req.session.isLoggedIn
     });
   } catch (err) {
     console.log("Error finding product detail", err);
@@ -37,6 +39,7 @@ const getIndex = async (req, res, next) => {
       prods: products,
       pageTitle: "Shop",
       path: "/",
+      isAuthenticated: req.session.isLoggedIn
     });
   } catch (err) {
     console.log("Error finding products", err);
@@ -45,12 +48,14 @@ const getIndex = async (req, res, next) => {
 
 const getCart = async (req, res, next) => {
   try {
-    const populate = await req.user.populate("cart.items.productId");
+    console.log(req.user)
+    const user = await req.user.populate("cart.items.productId");
     const cartItems = req.user.cart.items;
     res.render("shop/cart", {
       path: "/cart",
       pageTitle: "Your Cart",
       products: cartItems,
+      isAuthenticated: req.session.isLoggedIn
     });
   } catch (err) {
     console.log("Error fetching cart :", err);
@@ -89,10 +94,9 @@ const postOrder = async (req, res, next) => {
     const products = populatedUser.cart.items.map((i) => {
       return {
         quantity: i.quantity,
-        product: {...i.productId._doc}, // spread the product document into the order
+        product: { ...i.productId._doc }, // spread the product document into the order
       };
     });
-    console.log(products);
     const order = new Order({
       user: {
         name: req.user.name,
@@ -100,8 +104,8 @@ const postOrder = async (req, res, next) => {
       },
       products: products,
     });
-    await order.save()
-    await req.user.clearCart()
+    await order.save();
+    await req.user.clearCart();
     // then redirect to orders after placing an order
     res.redirect("/orders");
   } catch (err) {
@@ -112,14 +116,16 @@ const postOrder = async (req, res, next) => {
 
 const getOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find({"user.userId": req.user._id})
-    console.log(orders)
+    const orders = await Order.find({ "user.userId": req.user._id });
+    console.log(orders);
 
     res.render("shop/orders", {
       path: "/orders",
       pageTitle: "Your Orders",
       orders: orders,
+      isAuthenticated: req.session.isLoggedIn
     });
+    console.log(req.user)
   } catch (err) {
     console.log("error in getOrders controller", err);
   }

@@ -1,4 +1,3 @@
-const { ObjectId } = require("mongodb");
 const Product = require("../models/product");
 
 const getAddProduct = async (req, res, next) => {
@@ -7,6 +6,7 @@ const getAddProduct = async (req, res, next) => {
       pageTitle: "Add Product",
       path: "/admin/add-product",
       editing: false,
+      isAuthenticated: req.session.isLoggedIn
     });
   } catch (err) {
     console.log(err);
@@ -20,7 +20,7 @@ const postAddProduct = async (req, res, next) => {
     price: price,
     description: description,
     imageUrl: imageUrl,
-    userId: req.user._id,
+    userId: req.user,
   });
   try {
     const result = await product.save();
@@ -49,6 +49,7 @@ const getEditProduct = async (req, res, next) => {
       path: "/admin/edit-product",
       editing: editMode,
       product: editDetails,
+      isAuthenticated: req.session.isLoggedIn
     });
   } catch (err) {
     console.log("Error finding Edit Details", err);
@@ -86,6 +87,7 @@ const getProducts = async (req, res, next) => {
       prods: products,
       pageTitle: "Admin Products",
       path: "/admin/products",
+      isAuthenticated: req.session.isLoggedIn
     });
   } catch (err) {
     console.log("Error Finding products ", err);
