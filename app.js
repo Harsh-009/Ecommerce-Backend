@@ -54,26 +54,11 @@ app.use(async (req, res, next) => {
 app.use("/admin", adminRoutes);
 app.use(shopRoutes);
 app.use(authRoutes);
-
-
 app.use(errorController.get404);
 
 mongoose
   .connect(process.env.DATABASE_URL)
-  .then(() => {
-    User.findOne().then((user) => {
-      if (!user) {
-        const user = new User({
-          name: "Harsh",
-          email: "harsh@test.com",
-          cart: {
-            items: [],
-          },
-        });
-        user.save();
-      }
-    });
+  .then((result) => {
     app.listen(process.env.PORT);
-    console.log("connected");
   })
   .catch((err) => console.log(err));
