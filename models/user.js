@@ -9,6 +9,8 @@ const userSchema = new Schema({
     type: String,
     required: true,
   },
+  resetToken: String,
+  resetTokenExpiration: Date,
   cart: {
     items: [
       {
@@ -55,9 +57,9 @@ userSchema.methods.deleteItemFromCart = function (productId) {
 };
 
 userSchema.methods.clearCart = function () {
-  this.cart = {items: []}
-  return this.save()
-}
+  this.cart = { items: [] };
+  return this.save();
+};
 
 module.exports = model("User", userSchema);
 

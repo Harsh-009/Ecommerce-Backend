@@ -1,8 +1,10 @@
 const User = require("../models/user");
+const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 require("dotenv").config();
 
+// initializing nodemailer tranportation
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -11,7 +13,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-
+// returning the login route view
 const getLogin = (req, res, next) => {
   let message = req.flash("error");
   if (message.length > 0) {
@@ -26,6 +28,7 @@ const getLogin = (req, res, next) => {
   });
 };
 
+// returning the signup route view
 const getSignUp = (req, res, next) => {
   let message = req.flash("error");
   if (message.length > 0) {
@@ -40,6 +43,7 @@ const getSignUp = (req, res, next) => {
   });
 };
 
+// handling user login auth by finding email also validating password, and making a session for user
 const postLogin = async (req, res, next) => {
   const { email, password } = req.body;
 
@@ -69,6 +73,7 @@ const postLogin = async (req, res, next) => {
   }
 };
 
+// signing up the user through user details and sending the mail confimation
 const postSignUp = async (req, res, next) => {
   const { email, password, confirmPassword } = req.body;
   try {
@@ -98,7 +103,7 @@ const postSignUp = async (req, res, next) => {
       text: "Thank you for signing up to our shop",
     };
 
-    await transporter.sendMail(mailOptions)
+    await transporter.sendMail(mailOptions);
     return res.status(200).redirect("/login");
   } catch (err) {
     console.log(err);
@@ -106,11 +111,134 @@ const postSignUp = async (req, res, next) => {
   }
 };
 
+// Logout handler-> destroy the session whenever user hits logout
 const postLogout = (req, res) => {
   req.session.destroy((err) => {
     console.log(err);
     res.redirect("/");
   });
+};
+
+// returning the reset route view
+const getReset = (req, res, next) => {
+  let message = req.flash("error");
+  if (message.length > 0) {
+    message = message[0];
+  } else {
+    message = null;
+  }
+  res.render("auth/reset", {
+    path: "/reset",
+    pageTitle: "Reset",
+    errorMessage: message || null,
+  });
+};
+
+// resetting password =>
+const postReset = async (req, res, next) => {
+  const { email } = req.body;
+
+  try {
+    const buffer = await new Promise((resolve, reject) => {
+      crypto.randomBytes(32, (err, buffer) => {
+        if (err) return reject(err);
+        resolve(buffer);
+      });
+    });
+
+    const token = buffer.toString("hex"); // changing it to hex val
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      req.flash("error", "No user exists with that email");
+      return res.redirect("/reset");
+    }
+
+    user.resetToken = token;
+    user.resetTokenExpiration = Date.now() + 3600000;
+    await user.save(); // awaiting user to be saved
+
+    //send the reset email
+    const mailOptions = {
+      to: email,
+      from: "harsh@dev.com",
+      subject: "Password reset",
+      html: `
+        <p>You requested a password reset</p>
+        <p>Click this <a href="http://localhost:8080/reset/${token}">link</a> to set a new password </p>
+      `,
+    };
+
+    res.redirect("/");
+    await transporter.sendMail(mailOptions);
+  } catch (err) {
+    console.log("Error in post reset", err);
+    res.redirect("/reset");
+  }
+};
+
+// returning the new password view to user on click of mail link
+const getNewPassword = async (req, res, next) => {
+  const { token } = req.params;
+  try {
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiration: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      req.flash("error", "No user found with that request");
+      return res.redirect("/reset");
+    }
+
+    let message = req.flash("error");
+    if (message.length > 0) {
+      message = message[0];
+    } else {
+      message = null;
+    }
+    res.render("auth/new-password", {
+      path: "/new-password",
+      pageTitle: "New Password",
+      errorMessage: message || null,
+      userId: user._id.toString(),
+      passwordToken: token,
+    });
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+// checking and validating userPassword
+const postNewPassword = async (req, res, next) => {
+  const { password: newPassword, userId, passwordToken } = req.body;
+
+  try {
+    const user = await User.findOne({
+      resetToken: passwordToken,
+      resetTokenExpiration: { $gt: Date.now() },
+      _id: userId,
+    });
+
+    if (!user) {
+      req.flash("error", "Invalid or expired token.");
+      return res.redirect("/reset");
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+
+    user.password = hashedNewPassword;
+    user.resetToken = undefined;
+    user.resetTokenExpiration = undefined;
+
+    await user.save();
+    return res.redirect("/login");
+  } catch (err) {
+    console.log(err);
+    req.flash("error", "An error occurred while resetting your password. Please try again.");
+    res.redirect("/reset");
+  }
 };
 
 module.exports = {
@@ -119,4 +247,8 @@ module.exports = {
   postLogout,
   getSignUp,
   postSignUp,
+  getReset,
+  postReset,
+  getNewPassword,
+  postNewPassword,
 };
