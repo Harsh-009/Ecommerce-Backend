@@ -62,6 +62,9 @@ const postEditProduct = async (req, res, next) => {
 
   try {
     const product = await Product.findById(productId);
+    if(product.userId.toString() !== req.user._id.toString()) {
+      return res.redirect('/')
+    }
     if (!product) {
       console.log("product not found");
       return res.status(404).send("Product not Found");
@@ -81,7 +84,7 @@ const postEditProduct = async (req, res, next) => {
 
 const getProducts = async (req, res, next) => {
   try {
-    const products = await Product.find()
+    const products = await Product.find({userId: req.user._id})
       // .select("title price -_id")
       // .populate("userId", "name");
     return res.render("admin/products", {
@@ -98,7 +101,7 @@ const postDeleteProduct = async (req, res, next) => {
   const { productId } = req.body;
 
   try {
-    await Product.findByIdAndDelete(productId); // Await the deleteById function
+    await Product.deleteOne({_id: productId, userId: req.user._id}); // Await the deleteById function
     res.redirect("/admin/products");
   } catch (err) {
     console.log(err);
