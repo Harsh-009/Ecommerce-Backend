@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 require("dotenv").config();
+const { validationResult } = require("express-validator");
 
 // initializing nodemailer tranportation
 const transporter = nodemailer.createTransport({
@@ -25,6 +26,11 @@ const getLogin = (req, res, next) => {
     path: "/login",
     pageTitle: "Login",
     errorMessage: message || null,
+    oldInput: {
+      email: "",
+      password: ""
+    }, 
+    validationErrors: []
   });
 };
 
@@ -40,6 +46,12 @@ const getSignUp = (req, res, next) => {
     path: "/signup",
     pageTitle: "Signup",
     errorMessage: message || null,
+    oldInput: {
+      email: "",
+      password: "",
+      confirmPassword: ""
+    },
+    validationErrors: []
   });
 };
 
@@ -47,16 +59,37 @@ const getSignUp = (req, res, next) => {
 const postLogin = async (req, res, next) => {
   const { email, password } = req.body;
 
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).render("auth/login", {
+      path: "/login",
+      pageTitle: "Login",
+      errorMessage: errors.array()[0].msg,
+      oldInput: {
+        email: email,
+        password: password
+      },
+      validationErrors: errors.array()
+    });
+  }
+
   try {
     const validUser = await User.findOne({ email: email });
     if (!validUser) {
-      req.flash("error", "Invalid credentials");
-      return res.status(404).redirect("/login");
+      return res.status(422).render("auth/login", {
+        path: "/login",
+        pageTitle: "Login",
+        errorMessage: 'Invalid email or password',
+        oldInput: {
+          email: email,
+          password: password
+        },
+        validationErrors: []
+      });
     }
     const isMatch = await bcrypt.compare(password, validUser.password);
 
     if (!isMatch) {
-      console.log("password does not match");
       req.flash("error", "Invalid password");
       return res.status(401).redirect("/login");
     }
@@ -76,6 +109,20 @@ const postLogin = async (req, res, next) => {
 // signing up the user through user details and sending the mail confimation
 const postSignUp = async (req, res, next) => {
   const { email, password, confirmPassword } = req.body;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).render("auth/signup", {
+      path: "/signup",
+      pageTitle: "Signup",
+      errorMessage: errors.array()[0].msg,
+      oldInput: {
+        email: email,
+        password: password,
+        confirmPassword: confirmPassword
+      },
+      validationErrors: errors.array()
+    });
+  }
   try {
     const userDoc = await User.findOne({ email: email });
     if (userDoc) {
@@ -236,7 +283,10 @@ const postNewPassword = async (req, res, next) => {
     return res.redirect("/login");
   } catch (err) {
     console.log(err);
-    req.flash("error", "An error occurred while resetting your password. Please try again.");
+    req.flash(
+      "error",
+      "An error occurred while resetting your password. Please try again."
+    );
     res.redirect("/reset");
   }
 };
