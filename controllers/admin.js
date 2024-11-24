@@ -53,6 +53,9 @@ const postAddProduct = async (req, res, next) => {
     res.redirect("/admin/products");
   } catch (err) {
     console.log("Error creating the product ", err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 

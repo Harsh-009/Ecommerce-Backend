@@ -3,7 +3,7 @@ const dotenv = require("dotenv");
 dotenv.config();
 const express = require("express");
 const bodyParser = require("body-parser");
-const csrf = require('csurf')
+const csrf = require("csurf");
 const errorController = require("./controllers/error");
 const mongoose = require("mongoose");
 const session = require("express-session");
@@ -11,7 +11,7 @@ const MongoDBStore = require("connect-mongodb-session")(session);
 const app = express();
 const User = require("./models/user");
 const csrfProtection = csrf();
-const flash = require('connect-flash')
+const flash = require("connect-flash");
 
 // session store
 const store = new MongoDBStore({
@@ -20,7 +20,7 @@ const store = new MongoDBStore({
 });
 
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json())
+app.use(bodyParser.json());
 // views
 app.set("view engine", "ejs");
 app.set("views", "views");
@@ -40,32 +40,44 @@ app.use(
     store: store,
   })
 );
-app.use(csrfProtection)
-app.use(flash())
+app.use(csrfProtection);
+app.use(flash());
 
 app.use(async (req, res, next) => {
-  if(!req.session.user) {
-    return next()
+  if (!req.session.user) {
+    return next();
   }
   try {
     const user = await User.findById(req.session.user._id);
+    if (!user) {
+      return next();
+    }
     req.user = user;
     next();
   } catch (err) {
     console.log("something went wrong while connecting with user", err);
+    next(new Error(err))
   }
 });
 
 app.use((req, res, next) => {
   res.locals.isAuthenticated = req.session.isLoggedIn;
-  res.locals.csrfToken = req.csrfToken()
-  next()
-})
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
 
 app.use("/admin", adminRoutes);
 app.use(shopRoutes);
 app.use(authRoutes);
+app.get('/500',errorController.get500);
 app.use(errorController.get404);
+
+app.use((error, req, res, next) => {
+  res.status(500).render('500', {
+    pageTitle: 'Server Error!',
+    path: '/500',
+  })
+})
 
 mongoose
   .connect(process.env.DATABASE_URL)
