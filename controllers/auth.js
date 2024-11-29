@@ -103,6 +103,9 @@ const postLogin = async (req, res, next) => {
     });
   } catch (err) {
     console.log("something went wrong while connecting with user", err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
@@ -154,7 +157,9 @@ const postSignUp = async (req, res, next) => {
     return res.status(200).redirect("/login");
   } catch (err) {
     console.log(err);
-    return res.status(500).redirect("/signup");
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
@@ -221,7 +226,9 @@ const postReset = async (req, res, next) => {
     await transporter.sendMail(mailOptions);
   } catch (err) {
     console.log("Error in post reset", err);
-    res.redirect("/reset");
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
@@ -253,7 +260,9 @@ const getNewPassword = async (req, res, next) => {
       passwordToken: token,
     });
   } catch (err) {
-    console.log(err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
@@ -282,12 +291,9 @@ const postNewPassword = async (req, res, next) => {
     await user.save();
     return res.redirect("/login");
   } catch (err) {
-    console.log(err);
-    req.flash(
-      "error",
-      "An error occurred while resetting your password. Please try again."
-    );
-    res.redirect("/reset");
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 

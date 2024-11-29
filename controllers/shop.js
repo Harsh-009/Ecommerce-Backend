@@ -11,7 +11,9 @@ const getProducts = async (req, res, next) => {
       path: "/products",
     });
   } catch (err) {
-    console.log("Error fetching all products", err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
@@ -26,7 +28,9 @@ const getProduct = async (req, res, next) => {
       path: "/products",
     });
   } catch (err) {
-    console.log("Error finding product detail", err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
@@ -39,7 +43,9 @@ const getIndex = async (req, res, next) => {
       path: "/",
     });
   } catch (err) {
-    console.log("Error finding products", err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
@@ -54,8 +60,9 @@ const getCart = async (req, res, next) => {
       products: cartItems,
     });
   } catch (err) {
-    console.log("Error fetching cart :", err);
-    next(err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
@@ -70,7 +77,9 @@ const postCart = async (req, res, next) => {
     const result = await req.user.addToCart(product);
     res.redirect("/cart");
   } catch (err) {
-    console.log(err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
@@ -80,7 +89,9 @@ const postCartDeleteProduct = async (req, res, next) => {
     const result = await req.user.deleteItemFromCart(productId);
     res.redirect("/cart");
   } catch (err) {
-    console.log("unable to delete the item", err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
@@ -105,8 +116,9 @@ const postOrder = async (req, res, next) => {
     // then redirect to orders after placing an order
     res.redirect("/orders");
   } catch (err) {
-    console.log("Error placing order : ", err);
-    next(err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
@@ -120,7 +132,9 @@ const getOrders = async (req, res, next) => {
       orders: orders,
     });
   } catch (err) {
-    console.log("error in getOrders controller", err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 

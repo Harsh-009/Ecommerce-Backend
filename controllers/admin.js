@@ -20,10 +20,26 @@ const getAddProduct = async (req, res, next) => {
 };
 
 const postAddProduct = async (req, res, next) => {
-  const { title, price, description, imageUrl } = req.body;
-  
+  const { title, price, description } = req.body;
+  const image = req.file;
+  if (!image) {
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Add Product',
+      path: '/admin/add-product',
+      editing: false,
+      hasError: true,
+      product: {
+        title: title,
+        price: price,
+        description: description
+      },
+      errorMessage: 'Attached file is not an image.',
+      validationErrors: []
+    });
+  }
   const errors = validationResult(req)
 
+  const imageUrl = image.path;
   if(!errors.isEmpty()) {
     return res.status(422).render("admin/edit-product", {
       pageTitle: "Add Product",
@@ -50,7 +66,7 @@ const postAddProduct = async (req, res, next) => {
   });
   try {
     const result = await product.save();
-    res.redirect("/admin/products");
+    return res.redirect("/admin/products");
   } catch (err) {
     console.log("Error creating the product ", err);
     const error = new Error(err);
@@ -83,12 +99,15 @@ const getEditProduct = async (req, res, next) => {
       validationErrors: []
     });
   } catch (err) {
-    console.log("Error finding Edit Details", err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
 const postEditProduct = async (req, res, next) => {
-  const { title, price, description, imageUrl, productId } = req.body;
+  const { title, price, description, productId } = req.body;
+  const image = req.file;
   const errors = validationResult(req)
 
   if(!errors.isEmpty()) {
@@ -101,7 +120,6 @@ const postEditProduct = async (req, res, next) => {
         title: title,
         price: price,
         description: description,
-        imageUrl: imageUrl,
         _id: productId
       },
       errorMessage: errors.array()[0].msg,
@@ -121,13 +139,16 @@ const postEditProduct = async (req, res, next) => {
     product.title = title;
     product.description = description;
     product.price = price;
-    product.imageUrl = imageUrl;
+    if(image) {
+      product.imageUrl = image.path;
+    }
 
     await product.save();
     return res.redirect("/admin/products");
   } catch (err) {
-    console.log("Updating product failed", err);
-    res.status(500).send("Failed to update product");
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
@@ -142,7 +163,9 @@ const getProducts = async (req, res, next) => {
       path: "/admin/products",
     });
   } catch (err) {
-    console.log("Error Finding products ", err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
@@ -153,7 +176,9 @@ const postDeleteProduct = async (req, res, next) => {
     await Product.deleteOne({ _id: productId, userId: req.user._id }); // Await the deleteById function
     res.redirect("/admin/products");
   } catch (err) {
-    console.log(err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error)
   }
 };
 
