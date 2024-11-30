@@ -1,6 +1,9 @@
+const fs = require("fs");
+const path = require("path");
 const Product = require("../models/product");
 const Order = require("../models/order");
 const product = require("../models/product");
+const pdfDocument = require("pdfkit");
 
 const getProducts = async (req, res, next) => {
   try {
@@ -13,7 +16,7 @@ const getProducts = async (req, res, next) => {
   } catch (err) {
     const error = new Error(err);
     error.httpStatusCode = 500;
-    return next(error)
+    return next(error);
   }
 };
 
@@ -30,7 +33,7 @@ const getProduct = async (req, res, next) => {
   } catch (err) {
     const error = new Error(err);
     error.httpStatusCode = 500;
-    return next(error)
+    return next(error);
   }
 };
 
@@ -45,13 +48,13 @@ const getIndex = async (req, res, next) => {
   } catch (err) {
     const error = new Error(err);
     error.httpStatusCode = 500;
-    return next(error)
+    return next(error);
   }
 };
 
 const getCart = async (req, res, next) => {
   try {
-    console.log(req.user)
+    console.log(req.user);
     const user = await req.user.populate("cart.items.productId");
     const cartItems = req.user.cart.items;
     res.render("shop/cart", {
@@ -62,7 +65,7 @@ const getCart = async (req, res, next) => {
   } catch (err) {
     const error = new Error(err);
     error.httpStatusCode = 500;
-    return next(error)
+    return next(error);
   }
 };
 
@@ -79,7 +82,7 @@ const postCart = async (req, res, next) => {
   } catch (err) {
     const error = new Error(err);
     error.httpStatusCode = 500;
-    return next(error)
+    return next(error);
   }
 };
 
@@ -91,7 +94,7 @@ const postCartDeleteProduct = async (req, res, next) => {
   } catch (err) {
     const error = new Error(err);
     error.httpStatusCode = 500;
-    return next(error)
+    return next(error);
   }
 };
 
@@ -118,7 +121,7 @@ const postOrder = async (req, res, next) => {
   } catch (err) {
     const error = new Error(err);
     error.httpStatusCode = 500;
-    return next(error)
+    return next(error);
   }
 };
 
@@ -134,7 +137,46 @@ const getOrders = async (req, res, next) => {
   } catch (err) {
     const error = new Error(err);
     error.httpStatusCode = 500;
-    return next(error)
+    return next(error);
+  }
+};
+
+const getInvoice = async (req, res, next) => {
+  const orderId = req.params.orderId;
+  try {
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return next(new Error("No order found."));
+    }
+    if (order.user.userId.toString() !== req.user._id.toString()) {
+      return next(new Error("Unauthorized order"));
+    }
+    const invoiceName = "invoice-" + orderId + ".pdf";
+    const invoicePath = path.join("data", "invoices", invoiceName);
+
+    const pdfDoc = new pdfDocument();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attached; filename="${invoiceName}"`);
+    pdfDoc.pipe(fs.createWriteStream(invoicePath));
+    pdfDoc.pipe(res);
+
+    pdfDoc.fontSize(26).text("Invoice", {
+      underline: true,
+    });
+    pdfDoc.text("------------------------------");
+    pdfDoc.fontSize(20).text(`Order Id: ${orderId}`);
+    let totalPrice = 0;
+    order.products.forEach((prod) => {
+      totalPrice += prod.quantity * prod.product.price
+      pdfDoc.text(
+        `${prod.product.title} - ${prod.quantity} x $${prod.product.price}`
+      );
+    });
+    pdfDoc.text(`Total Price: $${totalPrice}`)
+
+    pdfDoc.end();
+  } catch (err) {
+    return next(err);
   }
 };
 
@@ -147,4 +189,5 @@ module.exports = {
   postOrder,
   postCartDeleteProduct,
   getCart,
+  getInvoice,
 };

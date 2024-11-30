@@ -7,6 +7,7 @@ const {
   postCartDeleteProduct,
   postOrder,
   getOrders,
+  getInvoice
 } = require("../controllers/shop");
 const path = require("path");
 const express = require("express");
@@ -29,5 +30,7 @@ router.post("/cart-delete-item", isAuth, postCartDeleteProduct);
 router.post("/create-order", isAuth, postOrder);
 
 router.get("/orders", isAuth, getOrders);
+
+router.get('/orders/:orderId', isAuth, getInvoice)
 
 module.exports = router;
